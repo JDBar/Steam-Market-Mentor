@@ -17,14 +17,15 @@ Chart.defaults.global.defaultFontColor = "#fff";
 $(document).ready(function () {
   // Search Item button click.
   $('.item-request button').click(function () {
-    var url = $('.item-request input').val();
+    var url = $('.item-request #item-url').val();
+    var days = $('.item-request #item-days').val();
     searchItem(url)
       .then(function (result) {
         Manager.pricingHistory = result.pricingHistory;
         if (Manager.chart) {
           Manager.chart.destroy();
         }
-        Manager.chart = updateChart(result.pricingHistory, 15);
+        Manager.chart = updateChart(result.pricingHistory, days);
       })
       .catch(function (error) {
         $(".pricing-history").text(error);
@@ -238,8 +239,8 @@ function updateChart (data, days=7) {
   var regressionAll = getLinearRegression(data, days);
   var regressionLow = getLinearRegression(dataLows, days);
   var regressionHigh = getLinearRegression(dataHighs, days);
-  var movingAverageN = Math.ceil(days / 2);
-  var movingAverageM = movingAverageN * 3;
+  var movingAverageN = $('#moving-average-n').val() || Math.min(Math.ceil(days / 2), 15);
+  var movingAverageM = $('#moving-average-m').val() || Math.min(Math.ceil(movingAverageN * 3.333), 50);
   var movingAverage = getMovingAverage(data, movingAverageN, days);
   var movingAverageLong = getMovingAverage(data, movingAverageM, days);
   var ctx = $("#pricing-chart");
