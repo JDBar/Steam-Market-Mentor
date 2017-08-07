@@ -44,6 +44,16 @@ button {
   background-color:rgba(50, 50, 50, 1);
 }
 
+.rsi-chart-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.rsi-chart {
+  background-color:rgba(50, 50, 50, 1);
+}
+
 .control {
   margin: 5 0 5 0;
 }

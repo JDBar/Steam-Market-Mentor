@@ -22,10 +22,11 @@ $(document).ready(function () {
     searchItem(url)
       .then(function (result) {
         Manager.pricingHistory = result.pricingHistory;
-        if (Manager.chart) {
-          Manager.chart.destroy();
+        if (Manager.charts) {
+          Manager.charts.pricingChart.destroy();
+          Manager.charts.rsiChart.destroy();
         }
-        Manager.chart = updateChart(result.pricingHistory, days);
+        Manager.charts = updateChart(result.pricingHistory, days);
       })
       .catch(function (error) {
         $(".pricing-history").text(error);
@@ -187,6 +188,57 @@ function getMovingAverage (data, amount=3, days=7) {
   return getRecentData(set, days);
 }
 
+// Returns RSI data over a number of days.
+function getRSI (data, sensitivity=14, days=7) {
+  var set = [];
+  var rs;
+  var averageGain;
+  var averageLoss;
+  var sumOfGains = 0;
+  var sumOfLosses = 0;
+  var lastValue;
+  if (data.length > sensitivity) {
+    lastValue = data[0][1];
+    for (var i = 1; i < data.length; i++) {
+      let thisValue = data[i][1]
+      if (i < sensitivity) {
+        if (thisValue > lastValue) {
+          sumOfGains += thisValue - lastValue;
+        }
+        else if (thisValue < lastValue) {
+          sumOfLosses += lastValue - thisValue;
+        }
+      }
+      if (i >= sensitivity) {
+        // First Average Gain = Sum of Gains over the past N periods / N
+        // First Average Loss = Sum of Losses over the past N periods / N
+        if (i === sensitivity) {
+          averageGain = sumOfGains / sensitivity;
+          averageLoss = sumOfLosses / sensitivity;
+        }
+        else {
+          // Average Gain = [(previous Average Gain) * (N-1) + Current Gain] / N
+          // Average Loss = [(previous Average Loss) * (N-1) - Current Loss] / N
+          if (thisValue > lastValue) {
+            averageGain = (averageGain * (sensitivity - 1) + (thisValue - lastValue)) / sensitivity;
+          }
+          else if (thisValue < lastValue) {
+            averageLoss = (averageLoss * (sensitivity - 1) + (lastValue - thisValue)) / sensitivity;
+          }
+        }
+        // RS = Average Gain / Average Loss
+        // Should the averageLoss be zero, RS is 100 by definition.
+        // RSI = 100 - 100 / (1 + RS)
+        rs = Math.min(averageGain / averageLoss, 100);
+        rsi = 100 - 100 / (1 + rs);
+        set.push([data[i][0], rsi]);
+      }
+      lastValue = thisValue;
+    }
+  }
+  return getRecentData(set, days);
+}
+
 // Filters out the most recent pricing data in a set by number of days.
 function getRecentData (data, days=7) {
   var set = [];
@@ -234,17 +286,22 @@ function convertDataForChart (data) {
 
 // Calculates all regressions and updates the chart.
 function updateChart (data, days=7) {
+  var rsiSensitivity = 14;
   var dataLows = getLocalExtrema(data, "min");
   var dataHighs = getLocalExtrema(data, "max");
   var regressionAll = getLinearRegression(data, days);
   var regressionLow = getLinearRegression(dataLows, days);
   var regressionHigh = getLinearRegression(dataHighs, days);
   var movingAverageN = $('#moving-average-n').val() || Math.min(Math.ceil(days / 2), 15);
-  var movingAverageM = $('#moving-average-m').val() || Math.min(Math.ceil(movingAverageN * 3.333), 50);
+  var movingAverageM = $('#moving-average-m').val() || Math.min(Math.ceil(movingAverageN * 3), 45);
   var movingAverage = getMovingAverage(data, movingAverageN, days);
   var movingAverageLong = getMovingAverage(data, movingAverageM, days);
-  var ctx = $("#pricing-chart");
-  return new Chart(ctx, {
+  var rsi = getRSI(data, rsiSensitivity, days);
+  var pricingCtx = $("#pricing-chart");
+  var rsiCtx = $("#rsi-chart");
+  console.log(rsi);
+
+  var pricingChart = new Chart(pricingCtx, {
     'type': 'scatter',
     'data': {
       'datasets': [
@@ -312,6 +369,7 @@ function updateChart (data, days=7) {
       ]
     },
     'options': {
+      'maintainAspectRatio': false,
       'layout': {
         'padding': 20
       },
@@ -336,6 +394,7 @@ function updateChart (data, days=7) {
         },
         'xAxes': [{
           'ticks': {
+            'beginAtZero': true,
             'callback': function (value, index, values) {
               return moment().subtract(days - value, 'days').format('MMM Do');
             }
@@ -357,4 +416,71 @@ function updateChart (data, days=7) {
       }
     }
   })
+
+  var rsiChart = new Chart(rsiCtx, {
+    'type': 'scatter',
+    'data': {
+      'datasets': [
+        {
+          'label': `RSI`,
+          'data': convertDataForChart(rsi),
+          'pointRadius': 0,
+          'pointHitRadius': 10,
+          'pointHoverRadius': 10,
+          'backgroundColor': 'rgba(0, 0, 0, 0)',
+          'borderColor': 'rgba(0, 255, 0, 0.9)',
+          'borderWidth': 3,
+          'lineTension': 0
+        }
+      ]
+    },
+    'options': {
+      'maintainAspectRatio': false,
+      'layout': {
+        'padding': 20
+      },
+      'legend': {
+        'labels': {
+          'fontColor': 'rgba(255, 255, 255, 1)'
+        }
+      },
+      'tooltips': {
+        'mode': 'nearest',
+        'callbacks': {
+          'label': function (toolTipItem, data) {
+            var x = `${moment().subtract(days - toolTipItem.xLabel, 'days').format('MMM Do')}`
+            var y = `${toolTipItem.yLabel.toFixed(2)}`;
+            return `${x}, ${y}`
+          }
+        } 
+      },
+      'scales': {
+        'scaleLabel': {
+          'fontColor': 'rgba(255, 255, 255, 1)'
+        },
+        'xAxes': [{
+          'ticks': {
+            'beginAtZero': true,
+            'callback': function (value, index, values) {
+              return moment().subtract(days - value, 'days').format('MMM Do');
+            }
+          },
+          'gridLines': {
+            'color': "rgba(255, 255, 255, 0.1)"
+          },
+        }],
+        'yAxes': [{
+          'ticks': {
+            'beginAtZero': true,
+            'max': 100
+          },
+          'gridLines': {
+            'color': "rgba(255, 255, 255, 0.1)"
+          }
+        }]
+      }
+    }
+  })
+
+  return {pricingChart, rsiChart};
 }
