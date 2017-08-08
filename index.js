@@ -9,8 +9,18 @@ const Chart = require('chart.js');
 const moment = require('moment');
 const Manager = {
   'pricingHistory': null,
-  'chart': null
+  'charts': null,
+  'days': null,
+  'options': {
+    'rsi': null,
+    'movingAverageN': null,
+    'movingAverageM': null
+  }
 }
+const DEFAULT_DAYS = 15;
+const DEFAULT_RSI = 14;
+const DEFAULT_MOVING_AVERAGE_N = 8;
+const DEFAULT_MOVING_AVERAGE_M = 24;
 
 Chart.defaults.global.defaultFontColor = "#fff";
 
@@ -18,10 +28,11 @@ $(document).ready(function () {
   // Search Item button click.
   $('.item-request button').click(function () {
     var url = $('.item-request #item-url').val();
-    var days = $('.item-request #item-days').val();
+    var days = Number($('.item-request #item-days').val()) || DEFAULT_DAYS;
     searchItem(url)
       .then(function (result) {
         Manager.pricingHistory = result.pricingHistory;
+        Manager.days = days;
         if (Manager.charts) {
           Manager.charts.pricingChart.destroy();
           Manager.charts.rsiChart.destroy();
@@ -31,6 +42,63 @@ $(document).ready(function () {
       .catch(function (error) {
         $(".pricing-history").text(error);
       })
+  })
+
+  $('#item-days, #moving-average-n, #moving-average-m, #rsi').on('change', function () {
+    // Validate these fields to make sure they are in the min or max.
+    var value = Number($(this).val());
+    var min = Number($(this).attr('min'));
+    var max = Number($(this).attr('max'));
+    if ($(this).val() === "") {
+      value = Number($(this).attr('placeholder'));
+      $(this).val("");
+    }
+    else if (value < min) {
+      $(this).val(min);
+      value = min;
+    }
+    else if (value > max) {
+      $(this).val(max);
+      value = max;
+    }
+    if ($(this).is($('#item-days'))) {
+      if (value !== Manager.days) {
+        if (Manager.charts.pricingChart) {
+          Manager.charts = performanceLogger(updateChart)(Manager.pricingHistory, value);
+        }
+        Manager.days = value;
+      }
+    }
+    if ($(this).is($('#rsi'))) {
+      if (value !== Manager.options.rsi) {
+        if (Manager.charts.rsiChart) {
+          let rsi = performanceLogger(getRSI)(Manager.pricingHistory, value, Manager.days);
+          Manager.charts.rsiChart.data.datasets[0].data = convertDataForChart(rsi);
+          Manager.charts.rsiChart.update();
+        }
+        Manager.options.rsi = value;
+      }
+    }
+    else if ($(this).is($('#moving-average-n'))) {
+      if (value !== Manager.options.movingAverageN) {
+        if (Manager.charts.pricingChart) {
+          let movingAverage = performanceLogger(getMovingAverage)(Manager.pricingHistory, value, Manager.days);
+          Manager.charts.pricingChart.data.datasets[0].data = convertDataForChart(movingAverage);
+          Manager.charts.pricingChart.update();
+        }
+        Manager.options.movingAverageN = value;
+      }
+    }
+    else if ($(this).is($('#moving-average-m'))) {
+      if (value !== Manager.options.movingAverageM) {
+        if (Manager.charts.pricingChart) {
+          let movingAverage = performanceLogger(getMovingAverage)(Manager.pricingHistory, value, Manager.days);
+          Manager.charts.pricingChart.data.datasets[1].data = convertDataForChart(movingAverage);
+          Manager.charts.pricingChart.update();
+        }
+        Manager.options.movingAverageN = value;
+      }
+    }
   })
 })
 
@@ -296,15 +364,15 @@ function performanceLogger (f) {
 
 // Calculates all regressions and updates the chart.
 function updateChart (data, days=7) {
-  var rsiSensitivity = Number($('#rsi').val()) || 14;
+  var rsiSensitivity = Number($('#rsi').val()) || DEFAULT_RSI;
   var start = performance.now();
   var dataLows = performanceLogger(getLocalExtrema)(data, "min");
   var dataHighs = performanceLogger(getLocalExtrema)(data, "max");
   var regressionAll = performanceLogger(getLinearRegression)(data, days);
   var regressionLow = performanceLogger(getLinearRegression)(dataLows, days);
   var regressionHigh = performanceLogger(getLinearRegression)(dataHighs, days);
-  var movingAverageN = $('#moving-average-n').val() || Math.min(Math.ceil(days / 2), 15);
-  var movingAverageM = $('#moving-average-m').val() || Math.min(Math.ceil(movingAverageN * 3), 45);
+  var movingAverageN = Number($('#moving-average-n').val()) || DEFAULT_MOVING_AVERAGE_N;
+  var movingAverageM = Number($('#moving-average-m').val()) || DEFAULT_MOVING_AVERAGE_M;
   var movingAverage = performanceLogger(getMovingAverage)(data, movingAverageN, days);
   var movingAverageLong = performanceLogger(getMovingAverage)(data, movingAverageM, days);
   var rsi = performanceLogger(getRSI)(data, rsiSensitivity, days);
@@ -405,7 +473,7 @@ function updateChart (data, days=7) {
         },
         'xAxes': [{
           'ticks': {
-            'beginAtZero': true,
+            'min': 0,
             'callback': function (value, index, values) {
               return moment().subtract(days - value, 'days').format('MMM Do');
             }
@@ -471,7 +539,7 @@ function updateChart (data, days=7) {
         },
         'xAxes': [{
           'ticks': {
-            'beginAtZero': true,
+            'min': 0,
             'callback': function (value, index, values) {
               return moment().subtract(days - value, 'days').format('MMM Do');
             }

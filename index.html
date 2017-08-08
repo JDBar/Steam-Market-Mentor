@@ -8,16 +8,19 @@
   <body>
     <div class="item-request">
       <input type="text" id="item-url"></input>
-      <input type="number" id="item-days" value="15"></input>
       <button>Search Item</button>
       <div class="controls">
           <div class="control">
+            <label># of Days:</label>
+            <input type="number" id="item-days" min=1 placeholder=15></input>
+          </div>
+          <div class="control">
             <label>Moving Average 1:</label>
-            <input type="number" id="moving-average-n" placeholder=8></input>
+            <input type="number" id="moving-average-n" min=1 max=40 placeholder=8></input>
           </div>
           <div class="control">
             <label>Moving Average 2:</label>
-            <input type="number" id="moving-average-m" placeholder=24></input>
+            <input type="number" id="moving-average-m" min=1 max=50 placeholder=24></input>
           </div>
           <div class="control">
             <label>RSI:</label>
