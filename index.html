@@ -12,27 +12,27 @@
       <div class="controls">
           <div class="control">
             <label># of Days:</label>
-            <input type="number" id="item-days" min=1 placeholder=15></input>
+            <input type="number" id="item-days" min=1 value=15 placeholder=15></input>
           </div>
           <div class="control">
             <label>Moving Average 1:</label>
-            <input type="number" id="moving-average-n" min=1 max=40 placeholder=8></input>
+            <input type="number" id="moving-average-n" min=1 max=40 value=8 placeholder=8></input>
           </div>
           <div class="control">
             <label>Moving Average 2:</label>
-            <input type="number" id="moving-average-m" min=1 max=50 placeholder=24></input>
+            <input type="number" id="moving-average-m" min=1 max=50 value=24 placeholder=24></input>
           </div>
           <div class="control">
             <label>RSI:</label>
-            <input type="number" id="rsi" min=1 max=40 placeholder=14></input>
+            <input type="number" id="rsi" min=1 max=40 value=14 placeholder=14></input>
           </div>
         </div>
     </div>
     <div class="item-data">
-      <div class="pricing-chart-container" style="height: 50vh;">
+      <div class="chart-container pricing-chart-container" style="height: 50vh;">
         <canvas id="pricing-chart"></canvas>
       </div>
-      <div class="rsi-chart-container" style="height: 20vh;">
+      <div class="chart-container rsi-chart-container" style="height: 20vh;">
         <canvas id="rsi-chart"></canvas>
       </div>
       <div class="pricing-chart-extras">

@@ -37,7 +37,7 @@ $(document).ready(function () {
           Manager.charts.pricingChart.destroy();
           Manager.charts.rsiChart.destroy();
         }
-        Manager.charts = performanceLogger(updateChart)(result.pricingHistory, days);
+        Manager.charts = updateChart(result.pricingHistory, days);
       })
       .catch(function (error) {
         $(".pricing-history").text(error);
@@ -66,7 +66,7 @@ $(document).ready(function () {
         if (Manager.charts.pricingChart) {
           Manager.charts.pricingChart.destroy();
           Manager.charts.rsiChart.destroy();
-          Manager.charts = performanceLogger(updateChart)(Manager.pricingHistory, value);
+          Manager.charts = updateChart(Manager.pricingHistory, value);
         }
         Manager.days = value;
       }
@@ -74,7 +74,7 @@ $(document).ready(function () {
     if ($(this).is($('#rsi'))) {
       if (value !== Manager.options.rsi) {
         if (Manager.charts.rsiChart) {
-          let rsi = performanceLogger(getRSI)(Manager.pricingHistory, value, Manager.days);
+          let rsi = getRSI(Manager.pricingHistory, value, Manager.days);
           Manager.charts.rsiChart.data.datasets[0].data = convertDataForChart(rsi);
           Manager.charts.rsiChart.update();
         }
@@ -84,7 +84,7 @@ $(document).ready(function () {
     else if ($(this).is($('#moving-average-n'))) {
       if (value !== Manager.options.movingAverageN) {
         if (Manager.charts.pricingChart) {
-          let movingAverage = performanceLogger(getMovingAverage)(Manager.pricingHistory, value, Manager.days);
+          let movingAverage = getMovingAverage(Manager.pricingHistory, value, Manager.days);
           Manager.charts.pricingChart.data.datasets[0].data = convertDataForChart(movingAverage);
           Manager.charts.pricingChart.update();
         }
@@ -94,7 +94,7 @@ $(document).ready(function () {
     else if ($(this).is($('#moving-average-m'))) {
       if (value !== Manager.options.movingAverageM) {
         if (Manager.charts.pricingChart) {
-          let movingAverage = performanceLogger(getMovingAverage)(Manager.pricingHistory, value, Manager.days);
+          let movingAverage = getMovingAverage(Manager.pricingHistory, value, Manager.days);
           Manager.charts.pricingChart.data.datasets[1].data = convertDataForChart(movingAverage);
           Manager.charts.pricingChart.update();
         }
@@ -368,16 +368,16 @@ function performanceLogger (f) {
 function updateChart (data, days=7) {
   var rsiSensitivity = Number($('#rsi').val()) || DEFAULT_RSI;
   var start = performance.now();
-  var dataLows = performanceLogger(getLocalExtrema)(data, "min");
-  var dataHighs = performanceLogger(getLocalExtrema)(data, "max");
-  var regressionAll = performanceLogger(getLinearRegression)(data, days);
-  var regressionLow = performanceLogger(getLinearRegression)(dataLows, days);
-  var regressionHigh = performanceLogger(getLinearRegression)(dataHighs, days);
+  var dataLows = getLocalExtrema(data, "min");
+  var dataHighs = getLocalExtrema(data, "max");
+  var regressionAll = getLinearRegression(data, days);
+  var regressionLow = getLinearRegression(dataLows, days);
+  var regressionHigh = getLinearRegression(dataHighs, days);
   var movingAverageN = Number($('#moving-average-n').val()) || DEFAULT_MOVING_AVERAGE_N;
   var movingAverageM = Number($('#moving-average-m').val()) || DEFAULT_MOVING_AVERAGE_M;
-  var movingAverage = performanceLogger(getMovingAverage)(data, movingAverageN, days);
-  var movingAverageLong = performanceLogger(getMovingAverage)(data, movingAverageM, days);
-  var rsi = performanceLogger(getRSI)(data, rsiSensitivity, days);
+  var movingAverage = getMovingAverage(data, movingAverageN, days);
+  var movingAverageLong = getMovingAverage(data, movingAverageM, days);
+  var rsi = getRSI(data, rsiSensitivity, days);
   var pricingCtx = $("#pricing-chart");
   var rsiCtx = $("#rsi-chart");
   var end = performance.now();
@@ -387,7 +387,7 @@ function updateChart (data, days=7) {
     'data': {
       'datasets': [
         {
-          'label': `Moving Average ${movingAverageN}`,
+          'label': `Moving Average 1`,
           'data': convertDataForChart(movingAverage),
           'pointRadius': 0,
           'pointHitRadius': 10,
@@ -397,7 +397,7 @@ function updateChart (data, days=7) {
           'borderWidth': 2
         },
         {
-          'label': `Moving Average ${movingAverageM}`,
+          'label': `Moving Average 2`,
           'data': convertDataForChart(movingAverageLong),
           'pointRadius': 0,
           'pointHitRadius': 10,
@@ -503,7 +503,7 @@ function updateChart (data, days=7) {
     'data': {
       'datasets': [
         {
-          'label': `RSI ${rsiSensitivity}`,
+          'label': `RSI`,
           'data': convertDataForChart(rsi),
           'pointRadius': 0,
           'pointHitRadius': 10,
