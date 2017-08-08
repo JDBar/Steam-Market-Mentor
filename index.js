@@ -64,6 +64,8 @@ $(document).ready(function () {
     if ($(this).is($('#item-days'))) {
       if (value !== Manager.days) {
         if (Manager.charts.pricingChart) {
+          Manager.charts.pricingChart.destroy();
+          Manager.charts.rsiChart.destroy();
           Manager.charts = performanceLogger(updateChart)(Manager.pricingHistory, value);
         }
         Manager.days = value;
