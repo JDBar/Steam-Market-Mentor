@@ -26,7 +26,7 @@ $(document).ready(function () {
           Manager.charts.pricingChart.destroy();
           Manager.charts.rsiChart.destroy();
         }
-        Manager.charts = updateChart(result.pricingHistory, days);
+        Manager.charts = performanceLogger(updateChart)(result.pricingHistory, days);
       })
       .catch(function (error) {
         $(".pricing-history").text(error);
@@ -164,7 +164,6 @@ function getLinearRegression (data, days) {
     data = getRecentData(data, days);
   }
   var reg = regression.linear(data);
-  console.log(reg);
   return reg;
 }
 
@@ -284,22 +283,34 @@ function convertDataForChart (data) {
   return set;
 }
 
+// A decorator function which logs the performance of its argument function.
+function performanceLogger (f) {
+  return function () {
+    var start = performance.now();
+    var result = f.apply(this, arguments);
+    var end = performance.now();
+    console.log(`${f.name} took ${(end - start).toFixed(2)}ms.`);
+    return result;
+  }
+}
+
 // Calculates all regressions and updates the chart.
 function updateChart (data, days=7) {
   var rsiSensitivity = 14;
-  var dataLows = getLocalExtrema(data, "min");
-  var dataHighs = getLocalExtrema(data, "max");
-  var regressionAll = getLinearRegression(data, days);
-  var regressionLow = getLinearRegression(dataLows, days);
-  var regressionHigh = getLinearRegression(dataHighs, days);
+  var start = performance.now();
+  var dataLows = performanceLogger(getLocalExtrema)(data, "min");
+  var dataHighs = performanceLogger(getLocalExtrema)(data, "max");
+  var regressionAll = performanceLogger(getLinearRegression)(data, days);
+  var regressionLow = performanceLogger(getLinearRegression)(dataLows, days);
+  var regressionHigh = performanceLogger(getLinearRegression)(dataHighs, days);
   var movingAverageN = $('#moving-average-n').val() || Math.min(Math.ceil(days / 2), 15);
   var movingAverageM = $('#moving-average-m').val() || Math.min(Math.ceil(movingAverageN * 3), 45);
-  var movingAverage = getMovingAverage(data, movingAverageN, days);
-  var movingAverageLong = getMovingAverage(data, movingAverageM, days);
-  var rsi = getRSI(data, rsiSensitivity, days);
+  var movingAverage = performanceLogger(getMovingAverage)(data, movingAverageN, days);
+  var movingAverageLong = performanceLogger(getMovingAverage)(data, movingAverageM, days);
+  var rsi = performanceLogger(getRSI)(data, rsiSensitivity, days);
   var pricingCtx = $("#pricing-chart");
   var rsiCtx = $("#rsi-chart");
-  console.log(rsi);
+  var end = performance.now();
 
   var pricingChart = new Chart(pricingCtx, {
     'type': 'scatter',
