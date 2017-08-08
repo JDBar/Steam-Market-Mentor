@@ -296,7 +296,7 @@ function performanceLogger (f) {
 
 // Calculates all regressions and updates the chart.
 function updateChart (data, days=7) {
-  var rsiSensitivity = 14;
+  var rsiSensitivity = Number($('#rsi').val()) || 14;
   var start = performance.now();
   var dataLows = performanceLogger(getLocalExtrema)(data, "min");
   var dataHighs = performanceLogger(getLocalExtrema)(data, "max");
@@ -393,7 +393,7 @@ function updateChart (data, days=7) {
         'mode': 'nearest',
         'callbacks': {
           'label': function (toolTipItem, data) {
-            var x = `${moment().subtract(days - toolTipItem.xLabel, 'days').format('MMM Do')}`
+            var x = `${moment().subtract((days - toolTipItem.xLabel) * 24, 'hours', true).format('MMM Do ha')}`
             var y = `$${toolTipItem.yLabel.toFixed(2)}`;
             return `${x}, ${y}`
           }
@@ -433,7 +433,7 @@ function updateChart (data, days=7) {
     'data': {
       'datasets': [
         {
-          'label': `RSI`,
+          'label': `RSI ${rsiSensitivity}`,
           'data': convertDataForChart(rsi),
           'pointRadius': 0,
           'pointHitRadius': 10,
@@ -459,7 +459,7 @@ function updateChart (data, days=7) {
         'mode': 'nearest',
         'callbacks': {
           'label': function (toolTipItem, data) {
-            var x = `${moment().subtract(days - toolTipItem.xLabel, 'days').format('MMM Do')}`
+            var x = `${moment().subtract((days - toolTipItem.xLabel) * 24, 'hours', true).format('MMM Do ha')}`
             var y = `${toolTipItem.yLabel.toFixed(2)}`;
             return `${x}, ${y}`
           }
